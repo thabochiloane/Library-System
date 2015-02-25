@@ -1,0 +1,403 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Windows.Forms;
+using System.Xml;
+using System.Xml.Linq;
+
+namespace CourseBookingsWin
+{
+    public partial class Form1 : Form
+    {
+        LoadXMLResults.Service1Client ft = new LoadXMLResults.Service1Client();
+        public Form1()
+        {
+            InitializeComponent();
+        }
+        private void cmdSelectFile_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog dialog = new OpenFileDialog();
+            dialog.Filter = "XML files (*.xml)|*.xml";
+            dialog.Title = "Select a file";
+            txtFile.Text = (dialog.ShowDialog() == DialogResult.OK)
+               ? dialog.FileName : null;
+            if(txtFile.Text!="")
+            {
+                cmdLoad.Visible = true;
+            }
+            else 
+            {
+                cmdLoad.Visible = false;
+            }
+        }
+        private void cmdClose_Click(object sender, EventArgs e)
+        {
+            if (MessageBox.Show("Are you sure you want to exit?","Close Message",MessageBoxButtons.YesNo,MessageBoxIcon.Question)==DialogResult.Yes)
+            {
+                Application.Exit();
+            }
+        }
+        private void cmdSave_Click(object sender, EventArgs e)
+        {
+            int AssessmentID, Sectionscore, stdsectionscore;
+            string QuestionNo, SectionName;
+            if (txtstdid.Text == "")
+            {
+                MessageBox.Show("Please provide BookingID", "Error Message", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                txtstdid.Focus();
+            }
+            else if(txtfinalScore.Text=="")
+            {
+                MessageBox.Show("Please process final score", "Error Message", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            else if (cmbpasses.Text == "[SELECT OPTION]")
+            {
+                MessageBox.Show("Please select an option", "Error Message", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            else
+            {
+               // string savedata = ft.SaveFileIntoDatabase(Convert.ToInt32(txtstdid.Text), Convert.ToInt32(txtfinalScore.Text), cmbpasses.SelectedText, txtxmlData.Text);
+
+                foreach (ListViewItem listItem in listView1.Items)
+                {
+                    AssessmentID = Convert.ToInt32(listItem.SubItems[0].Text);
+                    QuestionNo = listItem.SubItems[1].Text;
+                    SectionName = listItem.SubItems[2].Text;
+                    Sectionscore = Convert.ToInt32(listItem.SubItems[3].Text);
+                    stdsectionscore = Convert.ToInt32(listItem.SubItems[4].Text);
+                 //  string result = ft.SaveMarks(AssessmentID, QuestionNo, SectionName, Sectionscore, stdsectionscore);
+                }
+                    MessageBox.Show("Your information is successfully saved", "Notify Massage", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+        private void cmdLoad_Click(object sender, EventArgs e)
+        {
+            XmlDocument doc = new XmlDocument();
+            doc.Load(txtFile.Text);
+
+            XmlNodeList elemList = doc.GetElementsByTagName("Root");
+            for (int i = 0; i < elemList.Count; i++)
+            {
+                txtxmlData.Text = (elemList[i].InnerXml);
+            }
+            cmdLoad.Visible = false;
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            if (txtFile.Text == "")
+            {
+                MessageBox.Show("Please select xml file to process", "Error Message", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            else
+            {
+                XmlDocument doc = new XmlDocument();
+                doc.Load(txtFile.Text);
+
+                //======================Final Score and comment============================
+                XmlNodeList elementList = doc.GetElementsByTagName("YourTotalScoreValue");
+                for (int i = 0; i < elementList.Count; i++)
+                {
+                    label30.Text = (elementList[i].InnerText);
+                }
+                XmlNodeList elementList1 = doc.GetElementsByTagName("OverallScoreValue");
+                for (int i = 0; i < elementList1.Count; i++)
+                {
+                    label32.Text = (elementList1[i].InnerText);
+                }
+                XmlNodeList elementList2 = doc.GetElementsByTagName("PercentageValue");
+                for (int i = 0; i < elementList2.Count; i++)
+                {
+                    label34.Text = (elementList2[i].InnerText);
+                }
+                XmlNodeList elementList3 = doc.GetElementsByTagName("REMARK");
+                for (int i = 0; i < elementList3.Count; i++)
+                {
+                    label36.Text = (elementList3[i].InnerText);
+                }
+                txtfinalScore.Text = label34.Text;
+            }
+        }
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            //================Addning passed option itsms==================
+            cmbpasses.Items.Add("True");
+            cmbpasses.Items.Add("False");
+
+            //================Addning assessment type itsms==================
+            cmbasstype.Items.Add("Administration");
+            cmbasstype.Items.Add("Development");
+
+            //============creating listview1 columns========================
+            listView1.Columns.Add("Question Name", 150);
+            listView1.Columns.Add("Question Final Score", 120);
+            listView1.Columns.Add("STD Question Score", 120);
+
+            //============creating listview2 columns========================
+            listView2.Columns.Add("Section Name", 150);
+            listView2.Columns.Add("Section Score", 120);
+            listView2.Columns.Add("STD Section Score", 120);
+
+            //==================Load Student Name and ID=====================
+            cmbstdno.DataSource = ft.showstudentdetails().Tables[0];
+            cmbstdno.DisplayMember = "FIrstName";
+            cmbstdno.ValueMember = "StudentID";
+
+            //================Load Assessment ID============================
+            //cmbassesstype.t = "[Assessment TypeID";
+            cmbassesstype.DataSource = ft.showsassetype().Tables[0];
+            cmbassesstype.DisplayMember = "AssessmentTypeID";
+            
+        }
+        private void button2_Click(object sender, EventArgs e)
+        {
+            listView1.Items.Clear();
+
+            XmlDocument doc = new XmlDocument();
+            doc.Load(txtFile.Text);
+            ListViewItem row = new ListViewItem(txtstdid.Text);
+            //=============================Get question 1 marks obtained total============
+            XmlNodeList elemList = doc.GetElementsByTagName("TotalQuestion1Value");
+            for (int i = 0; i < elemList.Count; i++)
+            {
+                row.SubItems.Add(new ListViewItem.ListViewSubItem(row, elemList[i].InnerText));
+            }
+            XmlNodeList elemList1 = doc.GetElementsByTagName("Question1ScoreValue");
+            for (int i = 0; i < elemList1.Count; i++)
+            {
+                row.SubItems.Add(new ListViewItem.ListViewSubItem(row, elemList1[i].InnerText));
+            }
+            listView1.Items.Add(row);
+            //====================================End Security MArks===========================
+            //=============================Get question 2 marks obtained total=================
+            XmlDocument docs = new XmlDocument();
+            docs.Load(txtFile.Text);
+            row = new ListViewItem(txtstdid.Text);
+            XmlNodeList ele = docs.GetElementsByTagName("TotalQuestion2Value");
+            for (int i = 0; i < ele.Count; i++)
+            {
+              row.SubItems.Add(new ListViewItem.ListViewSubItem(row,ele[i].InnerText));
+            }
+            XmlNodeList ele1 = docs.GetElementsByTagName("FormDesignScoreValue");
+            for (int i = 0; i < ele1.Count; i++)
+            {
+               row.SubItems.Add(new ListViewItem.ListViewSubItem(row,ele1[i].InnerText));
+            }             
+            listView1.Items.Add(row);
+            //==================================End Form Desing Marks==========================
+            //=============================Get question 3 marks obtained total============
+            row = new ListViewItem(txtstdid.Text);
+            XmlNodeList alement = doc.GetElementsByTagName("TotalQuestion3Value");
+            for (int i = 0; i < alement.Count; i++)
+            {
+                row.SubItems.Add(new ListViewItem.ListViewSubItem(row,alement[i].InnerText));
+            }
+            XmlNodeList alement1 = doc.GetElementsByTagName("ScenarioScoreValue");
+            for (int i = 0; i < alement1.Count; i++)
+            {
+                row.SubItems.Add(new ListViewItem.ListViewSubItem(row,alement1[i].InnerText));
+            }
+            listView1.Items.Add(row);
+            //===========================================populating Listview 2 with data==================
+            listView2.Items.Clear();
+            //=============================Get question 1 Section marks obtained total (Roles)============
+            row = new ListViewItem(txtstdid.Text);
+            XmlNodeList elem = doc.GetElementsByTagName("TotalRolesValue");
+            for (int i = 0; i < elem.Count; i++)
+            {
+                row.SubItems.Add(new ListViewItem.ListViewSubItem(row, elem[i].InnerText));
+            }
+            XmlNodeList elem1 = doc.GetElementsByTagName("RolesScoreValue");
+            for (int i = 0; i < elem1.Count; i++)
+            {
+                row.SubItems.Add(new ListViewItem.ListViewSubItem(row, elem1[i].InnerText));
+            }
+            listView2.Items.Add(row);
+            //=================================Get question 1 Section marks obtained total (Users)===========
+            row = new ListViewItem(txtstdid.Text);
+            XmlNodeList eleme = doc.GetElementsByTagName("TotalUserValue");
+            for (int i = 0; i < eleme.Count; i++)
+            {
+                row.SubItems.Add(new ListViewItem.ListViewSubItem(row, eleme[i].InnerText));
+            }
+            XmlNodeList eleme1 = doc.GetElementsByTagName("UserScoreValue");
+            for (int i = 0; i < eleme1.Count; i++)
+            {
+                row.SubItems.Add(new ListViewItem.ListViewSubItem(row, eleme1[i].InnerText));
+            }
+            listView2.Items.Add(row);
+            //============================Get Form Design Section marks obtained total===================
+            row = new ListViewItem(txtstdid.Text);
+            XmlNodeList element = doc.GetElementsByTagName("TotalQuestion2Value");
+            for (int i = 0; i < element.Count; i++)
+            {
+                row.SubItems.Add(new ListViewItem.ListViewSubItem(row, element[i].InnerText));
+            }
+            XmlNodeList element1 = doc.GetElementsByTagName("FormDesignScoreValue");
+            for (int i = 0; i < element1.Count; i++)
+            {
+                row.SubItems.Add(new ListViewItem.ListViewSubItem(row, element1[i].InnerText));
+            }
+            listView2.Items.Add(row);
+            //============================Get Form Scenarios Section marks obtained total===================
+            row = new ListViewItem(txtstdid.Text);
+            XmlNodeList elements = doc.GetElementsByTagName("TotalQuestion3Value");
+            for (int i = 0; i < elements.Count; i++)
+            {
+                row.SubItems.Add(new ListViewItem.ListViewSubItem(row, elements[i].InnerText));
+            }
+            XmlNodeList elements1 = doc.GetElementsByTagName("ScenarioScoreValue");
+            for (int i = 0; i < elements1.Count; i++)
+            {
+                row.SubItems.Add(new ListViewItem.ListViewSubItem(row, elements1[i].InnerText));
+            }
+            listView2.Items.Add(row);
+        }
+       //===================================------------------------==========================
+        private void button3_Click(object sender, EventArgs e)
+        {
+            listView1.Items.Clear();
+            XmlDocument doc = new XmlDocument();
+            doc.Load(txtFile.Text);
+            ListViewItem row = new ListViewItem(txtstdid.Text);
+            //=============================Get question 1 marks obtained total============
+            XmlNodeList elemList = doc.GetElementsByTagName("TotalQuestion1Value");
+            for (int i = 0; i < elemList.Count; i++)
+            {
+                row.SubItems.Add(new ListViewItem.ListViewSubItem(row, elemList[i].InnerText));
+            }
+            XmlNodeList elemList1 = doc.GetElementsByTagName("Question1ScoreValue");
+            for (int i = 0; i < elemList1.Count; i++)
+            {
+                row.SubItems.Add(new ListViewItem.ListViewSubItem(row, elemList1[i].InnerText));
+            }
+            listView1.Items.Add(row);
+            //====================================End Security MArks===========================
+            row = new ListViewItem(txtstdid.Text);
+            XmlNodeList elemLis = doc.GetElementsByTagName("TotalQuestion4Value");
+            for (int i = 0; i < elemLis.Count; i++)
+            {
+                row.SubItems.Add(new ListViewItem.ListViewSubItem(row, elemLis[i].InnerText));
+            }
+            XmlNodeList elemLis1 = doc.GetElementsByTagName("ImportedUserScoreValue");
+            for (int i = 0; i < elemLis1.Count; i++)
+            {
+                row.SubItems.Add(new ListViewItem.ListViewSubItem(row, elemLis1[i].InnerText));
+            }
+            listView1.Items.Add(row);
+            //================================populating Listview 2 with data==================
+            listView2.Items.Clear();
+            //=============================Get question 1 Section marks obtained total (Roles)============
+            row = new ListViewItem(txtstdid.Text);
+            XmlNodeList elem = doc.GetElementsByTagName("TotalRolesValue");
+            for (int i = 0; i < elem.Count; i++)
+            {
+                row.SubItems.Add(new ListViewItem.ListViewSubItem(row, elem[i].InnerText));
+
+            }
+            XmlNodeList elem1 = doc.GetElementsByTagName("RolesScoreValue");
+            for (int i = 0; i < elem1.Count; i++)
+            {
+                row.SubItems.Add(new ListViewItem.ListViewSubItem(row, elem1[i].InnerText));
+            }
+            listView2.Items.Add(row);
+            //=================================Get question 1 Section marks obtained total (Users)===========
+            row = new ListViewItem(txtstdid.Text);
+            XmlNodeList eleme = doc.GetElementsByTagName("TotalUserValue");
+            for (int i = 0; i < eleme.Count; i++)
+            {
+                row.SubItems.Add(new ListViewItem.ListViewSubItem(row, eleme[i].InnerText));
+            }
+            XmlNodeList eleme1 = doc.GetElementsByTagName("UserScoreValue");
+            for (int i = 0; i < eleme1.Count; i++)
+            {
+                row.SubItems.Add(new ListViewItem.ListViewSubItem(row, eleme1[i].InnerText));
+            }
+            listView2.Items.Add(row);
+            //=================================Get question 1 Section marks obtained total (Settings)===========
+            row = new ListViewItem(txtstdid.Text);
+            XmlNodeList elements = doc.GetElementsByTagName("TotalScoreValue");
+            for (int i = 0; i < elements.Count; i++)
+            {
+                row.SubItems.Add(new ListViewItem.ListViewSubItem(row, elements[i].InnerText));
+
+            }
+            XmlNodeList elements1 = doc.GetElementsByTagName("SettingScoreValue");
+            for (int i = 0; i < elements1.Count; i++)
+            {
+                row.SubItems.Add(new ListViewItem.ListViewSubItem(row, elements1[i].InnerText));
+            }
+            listView2.Items.Add(row);
+            //================================Get the imported user totals============================
+            row = new ListViewItem(txtstdid.Text);
+            XmlNodeList elemens = doc.GetElementsByTagName("TotalQuestion4Value");
+            for (int i = 0; i < elemens.Count; i++)
+            {
+                row.SubItems.Add(new ListViewItem.ListViewSubItem(row, elemens[i].InnerText));
+            }
+
+            XmlNodeList elemens1 = doc.GetElementsByTagName("ImportedUserScoreValue");
+            for (int i = 0; i < elemens1.Count; i++)
+            {
+                row.SubItems.Add(new ListViewItem.ListViewSubItem(row, elemens1[i].InnerText));
+            }
+            listView2.Items.Add(row);
+            //==================================Getting the root note of each question===================
+            doc.Load(txtFile.Text);
+            XmlElement xelRoot = doc.DocumentElement;
+            XmlNodeList xnlNodes = xelRoot.SelectNodes("/Root");
+            foreach (XmlNode xndNode in xnlNodes)
+            {
+                XmlNode nodeSource = xndNode.SelectSingleNode(".//Security");
+               row.SubItems.Add(new ListViewItem.ListViewSubItem(row,nodeSource.Name.ToString()));
+            }
+            listView1.Items.Add(row);
+        }
+
+        private void cmbasstype_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (cmbasstype.Text =="Administration")
+            {
+                cmdSelectFile.Enabled = true;
+                button3.Visible = true;
+                button2.Visible = false;
+            }
+            else if (cmbasstype.Text=="Development")
+            {
+                cmdSelectFile.Enabled = true;
+                button2.Visible = true;
+                button3.Visible = false;
+            }
+            else
+            {
+                cmdSelectFile.Enabled = false;
+                button3.Visible = false;
+                button2.Visible = false;
+            }
+        }
+
+        private void button4_Click(object sender, EventArgs e)
+        {
+                txtxmlData.Clear();
+                cmdremove.Visible = false;
+                cmdLoad.Visible = true;
+        }
+        private void txtxmlData_TextChanged(object sender, EventArgs e)
+        {
+            if (txtxmlData.Text != "")
+            {
+                cmdremove.Visible = true;
+            }
+            else
+            {
+                cmdremove.Visible = false;
+            }
+        }
+        }
+    }
+}
